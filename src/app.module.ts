@@ -9,7 +9,6 @@ import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { AuthModule } from './auth/auth.module.ts';
 import { MemberModule } from './member/member.module.ts';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller.ts';
 import configuration from './config/configuration.js';
@@ -31,7 +30,6 @@ import { validateEnvironment } from './config/validation.js';
     HallOfShameModule,
     GalleryModule,
     YoutubeModule,
-    ThrottlerModule.forRoot(),
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],

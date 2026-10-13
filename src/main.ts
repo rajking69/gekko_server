@@ -77,8 +77,17 @@ export async function createNestServer() {
 }
 
 export default async function handler(req: any, res: any) {
-  const server = await createNestServer();
-  return server(req, res);
+  try {
+    const server = await createNestServer();
+    return server(req, res);
+  } catch (error) {
+    console.error('Serverless function invocation failed:', error);
+    res.status(500).json({
+      statusCode: 500,
+      message: 'Serverless function invocation failed',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 async function bootstrap() {

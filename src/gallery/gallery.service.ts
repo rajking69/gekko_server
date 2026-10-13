@@ -20,6 +20,9 @@ export class GalleryService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    if (process.env.VERCEL) {
+      return;
+    }
     try {
       await this.syncNow();
     } catch (error) {
