@@ -7,3 +7,4 @@ secrets/
 coverage/
 *.tsbuildinfo
 .DS_Store
+.vercel
