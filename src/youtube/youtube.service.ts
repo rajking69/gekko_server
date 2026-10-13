@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+﻿import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type {
   YouTubeLiveStatusResponse,
@@ -100,66 +100,126 @@ export class YoutubeService implements OnModuleInit {
       this.lastKnownLiveVideoId = null;
     }
 
-    // 2. Query search.list for live streams on channel (costs 100 units)
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(
-      this.channelId,
-    )}&eventType=live&type=video&key=${encodeURIComponent(this.apiKey!)}`;
+    // 2. High-reliability, low-quota check: Channel uploads playlist (UU...)
+    // Costs only 1 quota unit and has 0 search indexing delay when a stream goes live.
+    try {
+      const playlistId = 'UU' + this.channelId.substring(2);
+      const playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${encodeURIComponent(
+        playlistId,
+      )}&maxResults=5&key=${encodeURIComponent(this.apiKey!)}`;
 
-    const res = await fetch(searchUrl);
-    if (!res.ok) {
-      const errBody: any = await res.json().catch(() => ({}));
-      const msg = errBody?.error?.message || `YouTube API returned HTTP ${res.status}`;
-      throw new Error(msg);
+      const res = await fetch(playlistUrl);
+      if (res.ok) {
+        const data: any = await res.json();
+        const items = data.items || [];
+        for (const item of items) {
+          const videoId = item.snippet?.resourceId?.videoId;
+          if (!videoId) continue;
+          const liveVideo = await this.checkSpecificVideoLive(videoId);
+          if (liveVideo) {
+            this.lastKnownLiveVideoId = videoId;
+            if (liveVideo.concurrentViewers) {
+              this.lastKnownViewers = liveVideo.concurrentViewers;
+            }
+            return {
+              status: 'live',
+              isLive: true,
+              video: liveVideo,
+              channel: {
+                id: this.channelId,
+                title: liveVideo.channelTitle || item.snippet?.channelTitle || 'Team Gekko',
+                url: `https://www.youtube.com/channel/${this.channelId}`,
+              },
+              checkedAt: new Date().toISOString(),
+            };
+          }
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Uploads playlist live check failed: ${err?.message || err}`);
     }
 
-    const data: any = await res.json();
-    const liveItem = data.items?.[0];
+    // 3. Fallback: Query search.list for live streams on channel (costs 100 units)
+    try {
+      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(
+        this.channelId,
+      )}&eventType=live&type=video&order=date&key=${encodeURIComponent(this.apiKey!)}`;
 
-    if (!liveItem || !liveItem.id?.videoId) {
-      return {
-        status: 'offline',
-        isLive: false,
-        channel: {
-          id: this.channelId,
-          title: 'Team Gekko',
-          url: `https://www.youtube.com/channel/${this.channelId}`,
+      const res = await fetch(searchUrl);
+      if (res.ok) {
+        const data: any = await res.json();
+        const items = data.items || [];
+        for (const liveItem of items) {
+          const videoId = liveItem.id?.videoId;
+          if (!videoId) continue;
+          const detailed = await this.checkSpecificVideoLive(videoId);
+          if (detailed) {
+            this.lastKnownLiveVideoId = videoId;
+            if (detailed.concurrentViewers) {
+              this.lastKnownViewers = detailed.concurrentViewers;
+            }
+            return {
+              status: 'live',
+              isLive: true,
+              video: detailed,
+              channel: {
+                id: this.channelId,
+                title: detailed.channelTitle || liveItem.snippet?.channelTitle || 'Team Gekko',
+                url: `https://www.youtube.com/channel/${this.channelId}`,
+              },
+              checkedAt: new Date().toISOString(),
+            };
+          }
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Search live check failed: ${err?.message || err}`);
+    }
+
+    // 4. Fallback 3: Scrape public channel live endpoint
+    try {
+      const liveEndpointUrl = `https://www.youtube.com/channel/${this.channelId}/live`;
+      const res = await fetch(liveEndpointUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },
-        checkedAt: new Date().toISOString(),
-      };
+      });
+      if (res.ok) {
+        const html = await res.text();
+        const match = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
+        const isLiveSignal = html.includes('"isLive":true') || html.includes('"liveStreamability"');
+        if (match?.[1] && isLiveSignal) {
+          const videoId = match[1];
+          const detailed = await this.checkSpecificVideoLive(videoId);
+          if (detailed) {
+            this.lastKnownLiveVideoId = videoId;
+            return {
+              status: 'live',
+              isLive: true,
+              video: detailed,
+              channel: {
+                id: this.channelId,
+                title: detailed.channelTitle || 'Team Gekko',
+                url: `https://www.youtube.com/channel/${this.channelId}`,
+              },
+              checkedAt: new Date().toISOString(),
+            };
+          }
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Channel /live endpoint check failed: ${err?.message || err}`);
     }
 
-    const videoId = liveItem.id.videoId;
-    this.lastKnownLiveVideoId = videoId;
-
-    // Get liveStreamingDetails to verify if stream is ACTUALLY currently live (costs 1 unit)
-    const detailed = await this.checkSpecificVideoLive(videoId);
-
-    if (!detailed) {
-      // If checkSpecificVideoLive returned null, the video has ended or is not live!
-      this.lastKnownLiveVideoId = null;
-      return {
-        status: 'offline',
-        isLive: false,
-        channel: {
-          id: this.channelId,
-          title: liveItem.snippet.channelTitle || 'Team Gekko',
-          url: `https://www.youtube.com/channel/${this.channelId}`,
-        },
-        checkedAt: new Date().toISOString(),
-      };
-    }
-
-    if (detailed.concurrentViewers) {
-      this.lastKnownViewers = detailed.concurrentViewers;
-    }
-
+    // No live streams found
+    this.lastKnownLiveVideoId = null;
     return {
-      status: 'live',
-      isLive: true,
-      video: detailed,
+      status: 'offline',
+      isLive: false,
       channel: {
         id: this.channelId,
-        title: detailed.channelTitle || liveItem.snippet.channelTitle || 'Team Gekko',
+        title: 'Team Gekko',
         url: `https://www.youtube.com/channel/${this.channelId}`,
       },
       checkedAt: new Date().toISOString(),
