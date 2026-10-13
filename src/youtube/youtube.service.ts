@@ -13,7 +13,7 @@ export class YoutubeService implements OnModuleInit {
   private cache: YouTubeLiveStatusResponse | null = null;
   private cacheExpiresAt = 0;
   private lastKnownLiveVideoId: string | null = null;
-  private lastKnownViewers: string = "3";
+  private lastKnownViewers: string | undefined = undefined;
   private readonly cacheTtlMs = 60 * 1000; // 60 seconds
 
   constructor(private readonly configService: ConfigService) {
@@ -262,7 +262,7 @@ export class YoutubeService implements OnModuleInit {
           `https://i.ytimg.com/vi/${videoId}/hqdefault_live.jpg`,
         publishedAt: item.snippet.publishedAt,
         actualStartTime: item.liveStreamingDetails?.actualStartTime,
-        concurrentViewers: item.liveStreamingDetails?.concurrentViewers || item.statistics?.viewCount || this.lastKnownViewers || "3",
+        concurrentViewers: item.liveStreamingDetails?.concurrentViewers || undefined,
         url: `https://www.youtube.com/watch?v=${videoId}`,
         embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1`,
         channelTitle: item.snippet.channelTitle,
