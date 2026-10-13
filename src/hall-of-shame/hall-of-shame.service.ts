@@ -54,7 +54,7 @@ export class HallOfShameService {
   }
 
   async update(slug: string, updates: Partial<CreateHallOfShameDto>): Promise<HallOfShameDocument | null> {
-    return this.hallOfShameModel.findOneAndUpdate({ slug }, updates, { new: true, runValidators: true }).exec();
+    return this.hallOfShameModel.findOneAndUpdate({ slug }, updates, { returnDocument: 'after', runValidators: true }).exec();
   }
 
   async delete(slug: string): Promise<boolean> {
@@ -70,7 +70,7 @@ export class HallOfShameService {
         publishedAt: new Date(),
         $set: { displayOrder: 1 } 
       },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).exec();
   }
 
@@ -82,7 +82,7 @@ export class HallOfShameService {
         publishedAt: undefined,
         $unset: { publishedAt: '' }
       },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).exec();
   }
 
@@ -90,7 +90,7 @@ export class HallOfShameService {
     return this.hallOfShameModel.findOneAndUpdate(
       { slug },
       { featured },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).exec();
   }
 
@@ -98,7 +98,7 @@ export class HallOfShameService {
     return this.hallOfShameModel.findOneAndUpdate(
       { slug },
       { displayOrder },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).exec();
   }
 }

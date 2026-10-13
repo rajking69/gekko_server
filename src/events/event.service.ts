@@ -30,7 +30,7 @@ export class EventService {
   }
 
   async update(slug: string, updates: Partial<CreateEventDto>): Promise<EventDocument | null> {
-    return EventModel.findOneAndUpdate({ slug }, updates, { new: true, runValidators: true }).exec();
+    return EventModel.findOneAndUpdate({ slug }, updates, { returnDocument: 'after', runValidators: true }).exec();
   }
 
   async delete(slug: string): Promise<boolean> {
@@ -39,6 +39,6 @@ export class EventService {
   }
 
   async updateStatus(slug: string, status: string): Promise<EventDocument | null> {
-    return EventModel.findOneAndUpdate({ slug }, { status }, { new: true, runValidators: true }).exec();
+    return EventModel.findOneAndUpdate({ slug }, { status }, { returnDocument: 'after', runValidators: true }).exec();
   }
 }

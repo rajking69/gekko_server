@@ -84,7 +84,7 @@ export class MemberService {
     return this.memberModel.findOneAndUpdate(
       { authUserId: createMemberDto.authUserId },
       { $set: createMemberDto },
-      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+      { returnDocument: 'after', upsert: true, runValidators: true, setDefaultsOnInsert: true },
     ).exec() as Promise<MemberInterface>;
   }
 
@@ -93,7 +93,7 @@ export class MemberService {
     updateMemberDto: UpdateMemberDto,
   ): Promise<MemberInterface | null> {
     return this.memberModel.findOneAndUpdate({ username: id }, updateMemberDto, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }).exec();
   }
@@ -105,7 +105,7 @@ export class MemberService {
     return this.memberModel.findOneAndUpdate(
       { username: id },
       { status },
-      { new: true, runValidators: true },
+      { returnDocument: 'after', runValidators: true },
     ).exec();
   }
 

@@ -57,6 +57,5 @@ MemberSchema.index({ status: 1 });
 MemberSchema.index({ department: 1 });
 MemberSchema.index({ batch: 1 });
 MemberSchema.index({ joinedAt: -1 });
-MemberSchema.index({ username: 1 }, { unique: true });
 
 export { MemberSchema };

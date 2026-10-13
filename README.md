@@ -33,7 +33,7 @@ $ npm install
 
 ## Compile and run the project
 
-```bash
+````bash
 # development
 $ npm run start
 
@@ -58,18 +58,18 @@ Initial production foundation for the Gekko Community platform. This phase provi
 
 ```bash
 npm install
-```
+````
 
 Copy `.env.example` to `.env`, then set the real MongoDB connection string.
 
 ## Environment variables
 
-| Variable | Description |
-| --- | --- |
-| `NODE_ENV` | Runtime environment, such as `development` |
-| `PORT` | HTTP port, default `5000` |
-| `MONGODB_URI` | MongoDB Atlas connection string |
-| `FRONTEND_URL` | Allowed frontend origin |
+| Variable       | Description                                |
+| -------------- | ------------------------------------------ |
+| `NODE_ENV`     | Runtime environment, such as `development` |
+| `PORT`         | HTTP port, default `5000`                  |
+| `MONGODB_URI`  | MongoDB Atlas connection string            |
+| `FRONTEND_URL` | Allowed frontend origin                    |
 
 The database defaults to `Team_Gekko` when the URI does not include a database name. A database name already present in the URI is respected.
 
@@ -90,6 +90,20 @@ npm run start:prod
 
 - Health: `GET /api/v1/health`
 - Swagger: `GET /api/docs`
+
+## Google Drive gallery
+
+The gallery syncs image and video metadata from the configured Drive folder into MongoDB; media binaries remain in Drive.
+
+Required configuration:
+
+- `GOOGLE_DRIVE_GALLERY_FOLDER_ID=1TLHA8MKaUZIl65v_lTq72jQeYnH3OOll`
+- One Drive credential method from `.env.example` (`GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY`, OAuth refresh-token settings, or a public-folder API key)
+- `ADMIN_WHITELIST_EMAILS` and optional `GALLERY_MODERATOR_EMAILS` for gallery management access
+
+The folder must be shared with the configured service account or OAuth identity, or be publicly readable for API-key access. Sharing permissions are never changed by the server.
+
+Gallery endpoints are available under `/api/v1/gallery`. Public listing is paginated; management endpoints require an authenticated moderator/admin session. Trigger synchronization with `POST /api/v1/gallery/admin/sync`. The server also runs a guarded hourly sync while the Nest process is alive; deployments that suspend application processes should additionally invoke the manual endpoint from an external scheduler.
 
 ## Architecture
 
